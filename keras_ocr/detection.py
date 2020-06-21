@@ -606,7 +606,8 @@ class Detector:
         else:
             weights_path = None
         self.model = build_keras_model(weights_path=weights_path, backbone_name=backbone_name)
-        self.model.compile(loss='mse', optimizer=optimizer)
+        opt = keras.optimizers.Adam(lr=3.2768e-5, decay=5e-4)
+        self.model.compile(loss='mse', optimizer=opt,metrics=['accuracy'])
 
     def get_batch_generator(self,
                             image_generator,
