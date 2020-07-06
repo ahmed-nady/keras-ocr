@@ -340,6 +340,37 @@ def resize_image(image, max_scale, max_size):
     return cv2.resize(image,
                       dsize=(int(image.shape[1] * scale), int(image.shape[0] * scale))), scale
 
+def resize_aspect_ratio(img, square_size, interpolation=cv2.INTER_LINEAR, mag_ratio=1.5):
+    height, width, channel = img.shape
+
+    # magnify image size
+    target_size = mag_ratio * max(height, width)
+
+    # set original image size
+    if target_size > square_size:
+        target_size = square_size
+    
+    ratio = target_size / max(height, width)    
+
+    target_h, target_w = int(height * ratio), int(width * ratio)
+    proc = cv2.resize(img, (target_w, target_h), interpolation = interpolation)
+    # print()
+    # cv2.imshow("proc",proc)
+    # cv2.waitKey(0)
+
+
+    # make canvas and paste image
+    target_h32, target_w32 = target_h, target_w
+    if target_h % 32 != 0:
+        target_h32 = target_h + (32 - target_h % 32)
+    if target_w % 32 != 0:
+        target_w32 = target_w + (32 - target_w % 32)
+
+    #print("target_w, target_h),target_h32, target_w32",target_w, target_h,target_h32, target_w32)
+    resized = np.zeros((target_h32, target_w32, channel), dtype='uint8')
+    resized[0:target_h, 0:target_w, :] = proc
+
+    return resized, ratio
 
 # pylint: disable=too-many-arguments
 def fit(image, width: int, height: int, cval: int = 255, mode='letterbox', return_scale=False):
