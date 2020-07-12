@@ -244,45 +244,23 @@ def getBoxes(y_pred,
             boxes.append(2 * box)
         box_groups.append(np.array(boxes))
     return box_groups,score_map,link_map
-
-
-class UpsampleLike(keras.layers.Layer):
-    """ Keras layer for upsampling a Tensor to be the same shape as another Tensor.
-    """
-
-    # pylint:disable=unused-argument
-    def call(self, inputs, **kwargs):
-        source, target = inputs
-        target_shape = keras.backend.shape(target)
-        if keras.backend.image_data_format() == 'channels_first':
-            raise NotImplementedError
-        else:
-            # pylint: disable=no-member
-            return tf.compat.v1.image.resize_bilinear(source,
-                                                      size=(target_shape[1], target_shape[2]),
-                                                      half_pixel_centers=True)
-
-    def compute_output_shape(self, input_shape):
-        if keras.backend.image_data_format() == 'channels_first':
-            raise NotImplementedError
-        else:
-            return (input_shape[0][0], ) + input_shape[1][1:3] + (input_shape[0][-1], )
-
-def getBoxes_multi_scale(y_pred,
-             detection_threshold=0.7,
-             text_threshold=0.4,
-             link_threshold=0.4,
-             size_threshold=10):
+def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
     box_groups = []
     # Prepare data
-    textmap_scale_1 = y_pred[0][..., 0].copy()
-    linkmap_scale_1 = y_pred[0][..., 1].copy()
-    textmap_scale_2 = y_pred[1][..., 0].copy()
-    linkmap_scale_2 = y_pred[1][..., 1].copy()
+    print("111111111111")
+    y_pred_scale_1,y_pred_scale_2 =y_pred[0],y_pred[1] 
 
+    textmap_scale_1 = y_pred_scale_1[..., 0].copy()
+     print(type(textmap_scale_1),textmap_scale_1.shape)
+    linkmap_scale_1 = y_pred_scale_1[..., 1].copy()
+    textmap_scale_2 = y_pred_scale_2[..., 0].copy()
+    linkmap_scale_2 = y_pred_scale_2[..., 1].copy()
+    #h,w = textmap_scale_1.shape
     #resize text_map_scale-1 to ttx_map_scale_2
-    textmap = cv2.resize(textmap_scale_1,textmap_scale_2.shape) + textmap_scale_2
-    linkmap = cv2.resize(linkmap_scale_1,linkmap_scale_2.shape) + linkmap_scale_2
+    print(type(textmap_scale_1),textmap_scale_1.shape,type(textmap_scale_2),textmap_scale_1.shape)
+    textmap = cv2.resize(textmap_scale_1,(w,h)) + textmap_scale_2
+    #print(textmap,type(textmap))
+    linkmap = cv2.resize(linkmap_scale_1,(w,h)) + linkmap_scale_2
     score_map = cvt2HeatmapImg(textmap)
     link_map = cvt2HeatmapImg(linkmap)
 
@@ -349,6 +327,30 @@ def getBoxes_multi_scale(y_pred,
         boxes.append(2 * box)
     box_groups.append(np.array(boxes))
     return box_groups,score_map,link_map
+
+
+class UpsampleLike(keras.layers.Layer):
+    """ Keras layer for upsampling a Tensor to be the same shape as another Tensor.
+    """
+
+    # pylint:disable=unused-argument
+    def call(self, inputs, **kwargs):
+        source, target = inputs
+        target_shape = keras.backend.shape(target)
+        if keras.backend.image_data_format() == 'channels_first':
+            raise NotImplementedError
+        else:
+            # pylint: disable=no-member
+            return tf.compat.v1.image.resize_bilinear(source,
+                                                      size=(target_shape[1], target_shape[2]),
+                                                      half_pixel_centers=True)
+
+    def compute_output_shape(self, input_shape):
+        if keras.backend.image_data_format() == 'channels_first':
+            raise NotImplementedError
+        else:
+            return (input_shape[0][0], ) + input_shape[1][1:3] + (input_shape[0][-1], )
+
 def build_vgg_backbone(inputs):
     x = make_vgg_block(inputs, filters=64, n=0, pooling=False, prefix='basenet.slice1')
     x = make_vgg_block(x, filters=64, n=3, pooling=True, prefix='basenet.slice1')
@@ -738,19 +740,13 @@ class Detector:
                 yield X, y
     def get_prediction(self,images: typing.List[typing.Union[np.ndarray, str]]):
          images = [compute_input(tools.read(image)) for image in images]
-         return self.model.predict(np.array(images)
-    def detect_multi_scale(y_preds,detection_threshold=0.7,
-               text_threshold=0.4,
-               link_threshold=0.4,
-               size_threshold=10,
-               **kwargs):
-          boxes,score_map,link_map = getBoxes_multi_scale(y_preds, **kwargs),
-                         detection_threshold=detection_threshold,
-                         text_threshold=text_threshold,
-                         link_threshold=link_threshold,
-                         size_threshold=size_threshold)
+         return self.model.predict(np.array(images))
+    def detect_multi_scale(self,y_preds,detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
+        print("111111111111")
+        boxes,score_map,link_map = getBoxes_multi_scale(y_preds,detection_threshold=detection_threshold,text_threshold=text_threshold,link_threshold=link_threshold,size_threshold=size_threshold)
         return boxes,score_map,link_map
-                                   
+    def test5(self):
+      print("111111")                   
     def detect(self,
                images: typing.List[typing.Union[np.ndarray, str]],
                detection_threshold=0.7,
