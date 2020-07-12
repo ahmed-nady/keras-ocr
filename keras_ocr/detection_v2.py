@@ -251,20 +251,20 @@ def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link
     y_pred_scale_1,y_pred_scale_2 =y_pred[0],y_pred[1] 
 
     textmap_scale_1 = y_pred_scale_1[..., 0].copy()
-     print(type(textmap_scale_1),textmap_scale_1.shape)
+    #print(type(textmap_scale_1),textmap_scale_1.shape)
     linkmap_scale_1 = y_pred_scale_1[..., 1].copy()
     textmap_scale_2 = y_pred_scale_2[..., 0].copy()
     linkmap_scale_2 = y_pred_scale_2[..., 1].copy()
-    #h,w = textmap_scale_1.shape
+    h_s,w_s = textmap_scale_2.shape[:-2]
     #resize text_map_scale-1 to ttx_map_scale_2
-    print(type(textmap_scale_1),textmap_scale_1.shape,type(textmap_scale_2),textmap_scale_1.shape)
-    textmap = cv2.resize(textmap_scale_1,(w,h)) + textmap_scale_2
+    #print(type(textmap_scale_1),textmap_scale_1.shape,type(textmap_scale_2),textmap_scale_1.shape)
+    textmap = cv2.resize(textmap_scale_1,(w_s,h_s)) + textmap_scale_2
     #print(textmap,type(textmap))
-    linkmap = cv2.resize(linkmap_scale_1,(w,h)) + linkmap_scale_2
+    linkmap = cv2.resize(linkmap_scale_1,(w_s,h_s)) + linkmap_scale_2
     score_map = cvt2HeatmapImg(textmap)
     link_map = cvt2HeatmapImg(linkmap)
 
-    img_h, img_w = textmap.shape
+  
 
     _, text_score = cv2.threshold(textmap,
                                   thresh=text_threshold,
