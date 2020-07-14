@@ -171,11 +171,11 @@ def cvt2HeatmapImg(img):
 def get_orientateion(img):
     text_link_map= cvt2HeatmapImg(img)
     gray = cv2.cvtColor(text_link_map, cv2.COLOR_BGR2GRAY)
-    print("text_link_map min maxVal",np.min(gray),np.max(gray))
+    #print("text_link_map min maxVal",np.min(gray),np.max(gray))
     # Otsu's thresholding after Gaussian filtering
     blur = cv2.GaussianBlur(gray,(5,5),0)
-    thresh = cv2.threshold(blur, 100, 255,
-        cv2.THRESH_BINARY)[1]#| cv2.THRESH_OTSU)[1]
+    thresh = cv2.threshold(blur, 0, 255,
+        cv2.THRESH_BINARY| cv2.THRESH_OTSU)[1]
 
     cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
@@ -198,6 +198,7 @@ def getBoxes(y_pred,
         textmap = y_pred_cur[..., 0].copy()
         linkmap = y_pred_cur[..., 1].copy()
         o_angle = get_orientateion((textmap + linkmap))
+        #print("o_angle",o_angle)
         score_map = cvt2HeatmapImg(textmap)
         link_map = cvt2HeatmapImg(linkmap)
 
@@ -249,9 +250,9 @@ def getBoxes(y_pred,
                                         mode=cv2.RETR_TREE,
                                         method=cv2.CHAIN_APPROX_SIMPLE)[-2]
             contour = contours[0]
-            rectangle = cv2.minAreaRect(contour)
-            #box = cv2.boxPoints(cv2.minAreaRect(contour))
-            box = cv2.boxPoints((rectangle[0],rectangle[1],o_angle))
+            #rectangle = cv2.minAreaRect(contour)
+            box = cv2.boxPoints(cv2.minAreaRect(contour))
+            #box = cv2.boxPoints((rectangle[0],rectangle[1],o_angle))
 
             # Check to see if we have a diamond
             w, h = np.linalg.norm(box[0] - box[1]), np.linalg.norm(box[1] - box[2])
@@ -265,7 +266,7 @@ def getBoxes(y_pred,
                 box = np.array(np.roll(box, 4 - box.sum(axis=1).argmin(), 0))
             boxes.append(2 * box)
         box_groups.append(np.array(boxes))
-    return box_groups,score_map,link_map
+    return box_groups,score_map,link_map,o_angle
 def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
     box_groups = []
     # Prepare data
@@ -800,9 +801,9 @@ class Detector:
             size_threshold: The minimum area for a word.
         """
         images = [compute_input(tools.read(image)) for image in images]
-        boxes,score_map,link_map = getBoxes(self.model.predict(np.array(images), **kwargs),
+        boxes,score_map,link_map,angle = getBoxes(self.model.predict(np.array(images), **kwargs),
                          detection_threshold=detection_threshold,
                          text_threshold=text_threshold,
                          link_threshold=link_threshold,
                          size_threshold=size_threshold)
-        return boxes,score_map,link_map
+        return boxes,score_map,link_map,angle
