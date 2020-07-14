@@ -23,6 +23,8 @@ import typing
 # THE SOFTWARE.
 
 import cv2
+import math
+import imutils
 import numpy as np
 import tensorflow as tf
 import efficientnet.tfkeras as efficientnet
@@ -166,6 +168,24 @@ def cvt2HeatmapImg(img):
     return img
 
 
+def get_orientateion(img):
+    text_link_map= cvt2HeatmapImg(img)
+    gray = cv2.cvtColor(text_link_map, cv2.COLOR_BGR2GRAY)
+    print("text_link_map min maxVal",np.min(gray),np.max(gray))
+    # Otsu's thresholding after Gaussian filtering
+    blur = cv2.GaussianBlur(gray,(5,5),0)
+    thresh = cv2.threshold(blur, 100, 255,
+        cv2.THRESH_BINARY)[1]#| cv2.THRESH_OTSU)[1]
+
+    cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    if len(cnts)==0:
+      return 0
+    c = max(cnts, key=cv2.contourArea)
+    rectangle = cv2.minAreaRect(c)
+    return rectangle[2]
+
 def getBoxes(y_pred,
              detection_threshold=0.7,
              text_threshold=0.4,
@@ -177,7 +197,7 @@ def getBoxes(y_pred,
         # Prepare data
         textmap = y_pred_cur[..., 0].copy()
         linkmap = y_pred_cur[..., 1].copy()
-   
+        o_angle = get_orientateion((textmap + linkmap))
         score_map = cvt2HeatmapImg(textmap)
         link_map = cvt2HeatmapImg(linkmap)
 
@@ -229,7 +249,9 @@ def getBoxes(y_pred,
                                         mode=cv2.RETR_TREE,
                                         method=cv2.CHAIN_APPROX_SIMPLE)[-2]
             contour = contours[0]
-            box = cv2.boxPoints(cv2.minAreaRect(contour))
+            rectangle = cv2.minAreaRect(contour)
+            #box = cv2.boxPoints(cv2.minAreaRect(contour))
+            box = cv2.boxPoints((rectangle[0],rectangle[1],o_angle))
 
             # Check to see if we have a diamond
             w, h = np.linalg.norm(box[0] - box[1]), np.linalg.norm(box[1] - box[2])
