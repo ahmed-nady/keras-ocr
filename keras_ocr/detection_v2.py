@@ -270,24 +270,25 @@ def getBoxes(y_pred,
 def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
     box_groups = []
     # Prepare data
-    print("111111111111")
     y_pred_scale_1,y_pred_scale_2 =y_pred[0],y_pred[1] 
 
     textmap_scale_1 = y_pred_scale_1[..., 0].copy()
-    #print(type(textmap_scale_1),textmap_scale_1.shape)
     linkmap_scale_1 = y_pred_scale_1[..., 1].copy()
     textmap_scale_2 = y_pred_scale_2[..., 0].copy()
     linkmap_scale_2 = y_pred_scale_2[..., 1].copy()
-    h_s,w_s = textmap_scale_2.shape[:-2]
-    #resize text_map_scale-1 to ttx_map_scale_2
-    #print(type(textmap_scale_1),textmap_scale_1.shape,type(textmap_scale_2),textmap_scale_1.shape)
-    textmap = cv2.resize(textmap_scale_1,(w_s,h_s)) + textmap_scale_2
+    _,h_s,w_s = textmap_scale_2.shape 
+    _,h_s_1,w_s_1 = textmap_scale_1.shape 
+
+    temp  = np.reshape(textmap_scale_1,[h_s_1,w_s_1])
+    temp_link = np.reshape(linkmap_scale_1,[h_s_1,w_s_1])
+    temp_2 = np.reshape(textmap_scale_2,[h_s,w_s])
+    temp_link_2 = np.reshape(linkmap_scale_2,[h_s,w_s])
+    textmap = cv2.add(cv2.resize(temp,(w_s,h_s))  , temp_2)
     #print(textmap,type(textmap))
-    linkmap = cv2.resize(linkmap_scale_1,(w_s,h_s)) + linkmap_scale_2
+    linkmap= cv2.add(cv2.resize(temp_link,(w_s,h_s)), temp_link_2)
     score_map = cvt2HeatmapImg(textmap)
     link_map = cvt2HeatmapImg(linkmap)
-
-  
+    img_h, img_w = textmap.shape
 
     _, text_score = cv2.threshold(textmap,
                                   thresh=text_threshold,
@@ -297,6 +298,7 @@ def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link
                                   thresh=link_threshold,
                                   maxval=1,
                                   type=cv2.THRESH_BINARY)
+
     n_components, labels, stats, _ = cv2.connectedComponentsWithStats(np.clip(
         text_score + link_score, 0, 1).astype('uint8'),
                                                                       connectivity=4)
@@ -350,7 +352,6 @@ def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link
         boxes.append(2 * box)
     box_groups.append(np.array(boxes))
     return box_groups,score_map,link_map
-
 
 class UpsampleLike(keras.layers.Layer):
     """ Keras layer for upsampling a Tensor to be the same shape as another Tensor.
@@ -765,11 +766,8 @@ class Detector:
          images = [compute_input(tools.read(image)) for image in images]
          return self.model.predict(np.array(images))
     def detect_multi_scale(self,y_preds,detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
-        print("111111111111")
         boxes,score_map,link_map = getBoxes_multi_scale(y_preds,detection_threshold=detection_threshold,text_threshold=text_threshold,link_threshold=link_threshold,size_threshold=size_threshold)
-        return boxes,score_map,link_map
-    def test5(self):
-      print("111111")                   
+        return boxes,score_map,link_map                  
     def detect(self,
                images: typing.List[typing.Union[np.ndarray, str]],
                detection_threshold=0.7,
