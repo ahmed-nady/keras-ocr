@@ -27,7 +27,6 @@ import math
 import imutils
 import numpy as np
 import tensorflow as tf
-import efficientnet.tfkeras as efficientnet
 from tensorflow import keras
 
 from . import tools
@@ -400,27 +399,12 @@ def build_vgg_backbone(inputs):
     ]
 
 
-def build_efficientnet_backbone(inputs, backbone_name, imagenet):
-    backbone = getattr(efficientnet, backbone_name)(include_top=False,
-                                                    input_tensor=inputs,
-                                                    weights='imagenet' if imagenet else None)
-    return [
-        backbone.get_layer(slice_name).output for slice_name in [
-            'block2a_expand_activation', 'block3a_expand_activation', 'block4a_expand_activation',
-            'block5a_expand_activation'
-        ]
-    ]
-
 
 def build_keras_model(weights_path: str = None, backbone_name='vgg'):
     inputs = keras.layers.Input((None, None, 3))
 
     if backbone_name == 'vgg':
         s1, s2, s3, s4 = build_vgg_backbone(inputs)
-    elif 'efficientnet' in backbone_name.lower():
-        s1, s2, s3, s4 = build_efficientnet_backbone(inputs=inputs,
-                                                     backbone_name=backbone_name,
-                                                     imagenet=weights_path is None)
     else:
         raise NotImplementedError
 
@@ -706,21 +690,22 @@ class Detector:
         backbone_name: The backbone to use. Currently, only 'vgg' is supported.
     """
     def __init__(self,
+                 weights_path = None,
                  weights='clovaai_general',
                  load_from_torch=False,
                  optimizer='adam',
                  backbone_name='vgg'):
-        if weights is not None:
-            pretrained_key = (weights, load_from_torch)
-            assert backbone_name == 'vgg', 'Pretrained weights available only for VGG.'
-            assert pretrained_key in PRETRAINED_WEIGHTS, \
-                'Selected weights configuration not found.'
-            weights_config = PRETRAINED_WEIGHTS[pretrained_key]
-            weights_path = tools.download_and_verify(url=weights_config['url'],
-                                                     filename=weights_config['filename'],
-                                                     sha256=weights_config['sha256'])
-        else:
-            weights_path = None
+        if weights_path is None:
+            if weights is not None:
+                pretrained_key = (weights, load_from_torch)
+                assert backbone_name == 'vgg', 'Pretrained weights available only for VGG.'
+                assert pretrained_key in PRETRAINED_WEIGHTS, \
+                    'Selected weights configuration not found.'
+                weights_config = PRETRAINED_WEIGHTS[pretrained_key]
+                weights_path = tools.download_and_verify(url=weights_config['url'],
+                                                         filename=weights_config['filename'],
+                                                         sha256=weights_config['sha256'])
+
         self.model = build_keras_model(weights_path=weights_path, backbone_name=backbone_name)
         opt = keras.optimizers.Adam(lr=3.2768e-5, decay=5e-4)
         self.model.compile(loss='mse', optimizer=opt,metrics=['accuracy'])
