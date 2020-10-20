@@ -707,8 +707,8 @@ class Detector:
                                                          sha256=weights_config['sha256'])
 
         self.model = build_keras_model(weights_path=weights_path, backbone_name=backbone_name)
-        opt = keras.optimizers.Adam(lr=3.2768e-5, decay=5e-4)
-        self.model.compile(loss='mse', optimizer=opt,metrics=['accuracy'])
+        opt = keras.optimizers.Adam(lr=3.2768e-5) #, decay=5e-4
+        self.model.compile(loss='mse', optimizer=opt) #,metrics=['accuracy']
 
     def get_batch_generator(self,
                             image_generator,
