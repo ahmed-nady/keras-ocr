@@ -371,6 +371,27 @@ def resize_aspect_ratio(img, square_size, interpolation=cv2.INTER_LINEAR, mag_ra
     resized[0:target_h, 0:target_w, :] = proc
 
     return resized, ratio
+def resize_aspect_ratio_longest_side(img, square_size, interpolation=cv2.INTER_LINEAR, mag_ratio=1):
+    height, width, channel = img.shape
+    target_size = square_size
+    
+    ratio = target_size / max(height, width)    
+
+    target_h, target_w = int(height * ratio), int(width * ratio)
+    proc = cv2.resize(img, (target_w, target_h), interpolation = interpolation)
+
+    # make canvas and paste image
+    target_h32, target_w32 = target_h, target_w
+    if target_h % 32 != 0:
+        target_h32 = target_h + (32 - target_h % 32)
+    if target_w % 32 != 0:
+        target_w32 = target_w + (32 - target_w % 32)
+
+    #print("target_w, target_h),target_h32, target_w32",target_w, target_h,target_h32, target_w32)
+    resized = np.zeros((target_h32, target_w32, channel), dtype='uint8')
+    resized[0:target_h, 0:target_w, :] = proc
+
+    return resized, ratio
 
 # pylint: disable=too-many-arguments
 def fit(image, width: int, height: int, cval: int = 255, mode='letterbox', return_scale=False):
