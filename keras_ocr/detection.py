@@ -281,7 +281,7 @@ def getBoxes(y_pred,
             startidx = box.sum(axis=1).argmin()
             box = np.roll(box, 4-startidx, 0)
             box = np.array(box)
-            boxes.append(box)
+            boxes.append(2* box)
         box_groups.append(np.array(boxes))
     return box_groups,score_map,link_map,o_angle
 def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
