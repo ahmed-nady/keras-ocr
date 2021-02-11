@@ -244,26 +244,44 @@ def getBoxes(y_pred,
                 segmap[sy:ey, sx:ex],
                 cv2.getStructuringElement(cv2.MORPH_RECT, (1 + niter, 1 + niter)))
 
-            # Make rotated box from contour
-            contours = cv2.findContours(segmap.astype('uint8'),
-                                        mode=cv2.RETR_TREE,
-                                        method=cv2.CHAIN_APPROX_SIMPLE)[-2]
-            contour = contours[0]
-            #rectangle = cv2.minAreaRect(contour)
-            box = cv2.boxPoints(cv2.minAreaRect(contour))
-            #box = cv2.boxPoints((rectangle[0],rectangle[1],o_angle))
+            # # Make rotated box from contour
+            # contours = cv2.findContours(segmap.astype('uint8'),
+            #                             mode=cv2.RETR_TREE,
+            #                             method=cv2.CHAIN_APPROX_SIMPLE)[-2]
+            # contour = contours[0]
+            # #rectangle = cv2.minAreaRect(contour)
+            # box = cv2.boxPoints(cv2.minAreaRect(contour))
+            # #box = cv2.boxPoints((rectangle[0],rectangle[1],o_angle))
 
-            # Check to see if we have a diamond
+            # # Check to see if we have a diamond
+            # w, h = np.linalg.norm(box[0] - box[1]), np.linalg.norm(box[1] - box[2])
+            # box_ratio = max(w, h) / (min(w, h) + 1e-5)
+            # if abs(1 - box_ratio) <= 0.1:
+            #     l, r = contour[:, 0, 0].min(), contour[:, 0, 0].max()
+            #     t, b = contour[:, 0, 1].min(), contour[:, 0, 1].max()
+            #     box = np.array([[l, t], [r, t], [r, b], [l, b]], dtype=np.float32)
+            # else:
+            #     # Make clock-wise order
+            #     box = np.array(np.roll(box, 4 - box.sum(axis=1).argmin(), 0))
+            # boxes.append(2 * box)
+            # make box
+            np_contours = np.roll(np.array(np.where(segmap!=0)),1,axis=0).transpose().reshape(-1,2)
+            rectangle = cv2.minAreaRect(np_contours)
+            box = cv2.boxPoints(rectangle)
+
+            # align diamond-shape
             w, h = np.linalg.norm(box[0] - box[1]), np.linalg.norm(box[1] - box[2])
             box_ratio = max(w, h) / (min(w, h) + 1e-5)
             if abs(1 - box_ratio) <= 0.1:
-                l, r = contour[:, 0, 0].min(), contour[:, 0, 0].max()
-                t, b = contour[:, 0, 1].min(), contour[:, 0, 1].max()
+                l, r = min(np_contours[:,0]), max(np_contours[:,0])
+                t, b = min(np_contours[:,1]), max(np_contours[:,1])
                 box = np.array([[l, t], [r, t], [r, b], [l, b]], dtype=np.float32)
-            else:
-                # Make clock-wise order
-                box = np.array(np.roll(box, 4 - box.sum(axis=1).argmin(), 0))
-            boxes.append(2 * box)
+
+            # make clock-wise order
+            startidx = box.sum(axis=1).argmin()
+            box = np.roll(box, 4-startidx, 0)
+            box = np.array(box)
+            boxes.append(box)
         box_groups.append(np.array(boxes))
     return box_groups,score_map,link_map,o_angle
 def getBoxes_multi_scale(y_pred, detection_threshold=0.7,text_threshold=0.4,link_threshold=0.4,size_threshold=10):
